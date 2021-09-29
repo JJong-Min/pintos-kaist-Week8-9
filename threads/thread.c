@@ -24,6 +24,8 @@
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
 
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -648,7 +650,7 @@ void update_next_tick_to_awake(int64_t ticks)
 	next_tick_to_awake = MIN(next_tick_to_awake, ticks);
 }
 
-void get_next_tick_to_awake(void)
+int64_t get_next_tick_to_awake(void)
 {
 	return next_tick_to_awake;
 }
