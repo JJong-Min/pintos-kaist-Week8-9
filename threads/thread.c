@@ -32,6 +32,9 @@ static struct list ready_list;
    that are ready to be waiting for something. */
 static struct list blocked_list;
 
+/* the minimum tick of threads in blocked_list  */
+static int64_t next_tick_to_awake;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -45,9 +48,10 @@ static struct lock tid_lock;
 static struct list destruction_req;
 
 /* Statistics. */
-static long long idle_ticks;    /* # of timer ticks spent idle. */
-static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
-static long long user_ticks;    /* # of timer ticks in user programs. */
+static long long idle_ticks;    		/* # of timer ticks spent idle. */
+static long long kernel_ticks;  		/* # of timer ticks in kernel threads. */
+static long long user_ticks;    		/* # of timer ticks in user programs. */
+static long long next_tick_to_awake;	/* the minimum tick of threads in blocked_list  */
 
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
@@ -114,6 +118,7 @@ thread_init (void) {
 	list_init (&ready_list);
 	list_init (&blocked_list);
 	list_init (&destruction_req);
+	next_tick_to_awake = INT64_MAX;
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -592,4 +597,22 @@ allocate_tid (void) {
 	lock_release (&tid_lock);
 
 	return tid;
+}
+
+void thread_sleep(int64_t ticks)
+{
+	struct thread *curr = thread_current();
+	enum intr_level old_level;
+	ASSERT(!intr_context());
+	old_level = intr_disable();
+	curr->wake_time = ticks;
+
+	if (curr != idle_thread)
+	{
+		list_push_back(&blocked_list, &curr->elem);
+	}
+
+	update_next_tick_to_awake(ticks);
+	do_schedule(THREAD_BLOCKED);
+	intr_set_level(old_level);
 }
