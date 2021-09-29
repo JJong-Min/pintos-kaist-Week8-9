@@ -599,6 +599,8 @@ allocate_tid (void) {
 	return tid;
 }
 
+/* Transitions the running thread from the funning state to the blocked state 
+	and push the thread into bloced_list*/
 void thread_sleep(int64_t ticks)
 {
 	struct thread *curr = thread_current();
@@ -617,6 +619,8 @@ void thread_sleep(int64_t ticks)
 	intr_set_level(old_level);
 }
 
+
+/* the threads that is BLOCKED and in blocked_list awake*/
 void thread_awake(int64_t ticks)
 {
 	next_tick_to_awake = INT16_MAX;
