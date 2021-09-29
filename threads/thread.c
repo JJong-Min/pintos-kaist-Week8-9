@@ -616,3 +616,25 @@ void thread_sleep(int64_t ticks)
 	do_schedule(THREAD_BLOCKED);
 	intr_set_level(old_level);
 }
+
+void thread_awake(int64_t ticks)
+{
+	next_tick_to_awake = INT16_MAX;
+	struct list_elem *e = list_begin(&blocked_list);
+	struct thread *t;
+
+	for (e ; e != list_end(&blocked_list);)
+	{
+		t = list_entry(e, struct thread, elem);
+		if (t->wake_time <= ticks)
+		{
+			e = list_remove(&t->elem);
+			thread_unblock(t);
+		}
+		else
+		{
+			update_next_tick_to_awake(t->wake_time);
+			e = list_next(e);
+		}
+	}
+}
