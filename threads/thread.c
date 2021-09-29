@@ -642,3 +642,13 @@ void thread_awake(int64_t ticks)
 		}
 	}
 }
+
+void update_next_tick_to_awake(int64_t ticks)
+{
+	next_tick_to_awake = MIN(next_tick_to_awake, ticks);
+}
+
+void get_next_tick_to_awake(void)
+{
+	return next_tick_to_awake;
+}
