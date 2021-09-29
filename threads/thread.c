@@ -28,6 +28,10 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* List of processes in THREAD_BLOCKED state, that is, processes
+   that are ready to be waiting for something. */
+static struct list blocked_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
