@@ -220,6 +220,7 @@ thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
+	thread_test_preemption();
 
 	return tid;
 }
@@ -327,6 +328,7 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	thread_test_preemption();
 }
 
 /* Returns the current thread's priority. */
