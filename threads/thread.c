@@ -627,7 +627,7 @@ void thread_sleep(int64_t ticks)
 }
 
 
-/* the threads that is BLOCKED and in blocked_list awake*/
+/* the threads that are BLOCKED in blocked_list awake*/
 void thread_awake(int64_t ticks)
 {
 	next_tick_to_awake = INT16_MAX;
@@ -650,16 +650,19 @@ void thread_awake(int64_t ticks)
 	}
 }
 
+/* update the minimum tick of blocked threads in blocked_list */
 void update_next_tick_to_awake(int64_t ticks)
 {
 	next_tick_to_awake = MIN(next_tick_to_awake, ticks);
 }
 
+/* return next_tick_to_awake that is the minimum tick of blocked threads in blocked_list*/
 int64_t get_next_tick_to_awake(void)
 {
 	return next_tick_to_awake;
 }
 
+/* return true if arg1's priority is greater than arg2's priority else return false */
 bool 
 thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED)
 {
@@ -667,6 +670,7 @@ thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNU
          > list_entry (s, struct thread, elem)->priority;
 }
 
+/*activate thread_yield when priority of running thread is less than priority of the first element in ready list*/
 void 
 thread_test_preemption (void)
 {
