@@ -24,8 +24,9 @@
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
 
-
+/* return the minimun value between two arguments */
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -53,7 +54,6 @@ static struct list destruction_req;
 static long long idle_ticks;    		/* # of timer ticks spent idle. */
 static long long kernel_ticks;  		/* # of timer ticks in kernel threads. */
 static long long user_ticks;    		/* # of timer ticks in user programs. */
-static long long next_tick_to_awake;	/* the minimum tick of threads in blocked_list  */
 
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
@@ -72,6 +72,8 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+bool thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED);
+void thread_test_preemption (void);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -252,7 +254,8 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	// change list push func because of implementing priority scheduling
+	list_insert_ordered(&ready_list, &t->elem, thread_compare_priority, 0);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -315,7 +318,7 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, thread_compare_priority, 0);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -559,7 +562,7 @@ schedule (void) {
 	ASSERT (curr->status != THREAD_RUNNING);
 	ASSERT (is_thread (next));
 	/* Mark us as running. */
-	next->status = THREAD_RUNNING;
+	next->status = THREAD_RUNNING; 
 
 	/* Start new time slice. */
 	thread_ticks = 0;
@@ -653,4 +656,11 @@ void update_next_tick_to_awake(int64_t ticks)
 int64_t get_next_tick_to_awake(void)
 {
 	return next_tick_to_awake;
+}
+
+bool 
+thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNUSED)
+{
+    return list_entry (l, struct thread, elem)->priority
+         > list_entry (s, struct thread, elem)->priority;
 }
