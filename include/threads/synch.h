@@ -1,5 +1,6 @@
 #ifndef THREADS_SYNCH_H
 #define THREADS_SYNCH_H
+#define UNUSED __attribute__ ((unused))
 
 #include <list.h>
 #include <stdbool.h>
@@ -37,7 +38,7 @@ void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
-
+bool sema_compare_priority (const struct list_elem *l, const struct list_elem *s, void *aux UNUSED);
 /* Optimization barrier.
  *
  * The compiler will not reorder operations across an
