@@ -95,6 +95,12 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
+		/* priority donation */
+	int init_priority;					/* the original priority*/
+	struct lock *wait_on_lock;			/* the locks which is thread wait*/
+	struct list donations;				/* the thread who donated priority to thread */
+	struct list_elem donation_elem;		/* the thread who donated priority to thread */
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -109,11 +115,7 @@ struct thread {
 	unsigned magic;                     /* Detects stack overflow. */
 	int64_t wake_time;             		/* the time is thread wake up*/
 
-	/* priority donation */
-	int init_priority;					/* the original priority*/
-	struct lock *wait_on_lock;			/* the locks which is thread wait*/
-	struct list donations;				/* the thread who donated priority to thread */
-	struct list_elem donation_elem;		/* the thread who donated priority to thread */
+
 };
 
 /* If false (default), use round-robin scheduler.
@@ -158,7 +160,7 @@ bool thread_compare_priority (struct list_elem *l, struct list_elem *s, void *au
 void  thread_test_preemption (void);
 
 /* priority donation */
-bool thread_compare_donate_priority(const struct list_elem *l, const struct list_elem *s, void *aux UNUSED);
+bool thread_compare_donate_priority (const struct list_elem *l, const struct list_elem *s, void *aux UNUSED);
 void donate_priority (void);
 void remove_with_lock (struct lock *lock);
 void refresh_priority(void);
