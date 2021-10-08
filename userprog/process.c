@@ -164,10 +164,11 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
-int
-process_exec (void *f_name) {
+int process_exec(void *f_name)
+{
 	char *file_name = f_name;
 	bool success;
+	struct thread *cur = thread_current();
 
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
@@ -178,21 +179,46 @@ process_exec (void *f_name) {
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
 	/* We first kill the current context */
-	process_cleanup ();
+	process_cleanup();
+
+	// Project 2-1. Pass args - parse
+	char *argv[30]; // Q. 테스트는 일단 통과, 사이즈 30이면 충분하겠지? 동적할당 안해도 되겠지?
+	int argc = 0;
+
+	char *token, *save_ptr;
+	token = strtok_r(file_name, " ", &save_ptr);
+	while (token != NULL)
+	{
+		argv[argc] = token;
+		token = strtok_r(NULL, " ", &save_ptr);
+		argc++;
+	}
 
 	/* And then load the binary */
-	success = load (file_name, &_if);
+	success = load(file_name, &_if);
 
 	/* If load failed, quit. */
-	palloc_free_page (file_name);
 	if (!success)
+	{
+		palloc_free_page(file_name);
 		return -1;
+	}
+
+	// Project 2-1. Pass args - load arguments onto the user stack
+	void **rspp = &_if.rsp;
+	load_userStack(argv, argc, rspp);
+	_if.R.rdi = argc;
+	_if.R.rsi = (uint64_t)*rspp + sizeof(void *);
+
+	hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)*rspp, true); // #ifdef DEBUG
+	// Q. ptr to number? -> convert to int, uint64_t
+
+	palloc_free_page(file_name);
 
 	/* Start switched process. */
-	do_iret (&_if);
-	NOT_REACHED ();
+	do_iret(&_if);
+	NOT_REACHED();
 }
-
 
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
