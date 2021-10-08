@@ -679,13 +679,31 @@ thread_compare_priority (struct list_elem *l, struct list_elem *s, void *aux UNU
 }
 
 /*activate thread_yield when priority of running thread is less than priority of the first element in ready list*/
-void 
+void
 thread_test_preemption (void)
 {
-    if (!list_empty (&ready_list) && 
-    thread_current ()->priority < 
-    list_entry (list_front (&ready_list), struct thread, elem)->priority)
-        thread_yield ();
+	if(list_empty(&ready_list))
+	{
+		return;
+	}
+
+	struct thread *t = list_entry (list_front (&ready_list), struct thread, elem);
+
+	if(intr_context())
+	{
+		thread_ticks++;
+		if (thread_ticks >= TIME_SLICE && thread_current()->priority == t->priority)
+		{
+      		intr_yield_on_return();
+      		return;
+    	}
+	}
+	else {
+		if(thread_current()->priority < t->priority)
+		{
+			thread_yield();
+		}
+	}
 }
 
 /* priority donation func*/
