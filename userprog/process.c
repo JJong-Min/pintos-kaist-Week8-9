@@ -27,12 +27,6 @@ static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
 
-/* General process initializer for initd and other process. */
-static void
-process_init (void) {
-	struct thread *current = thread_current ();
-}
-
 /* Starts the first userland program, called "initd", loaded from FILE_NAME.
  * The new thread may be scheduled (and may even exit)
  * before process_create_initd() returns. Returns the initd's
@@ -67,8 +61,6 @@ initd (void *f_name) {
 #ifdef VM
 	supplemental_page_table_init (&thread_current ()->spt);
 #endif
-
-	process_init ();
 
 	if (process_exec (f_name) < 0)
 		PANIC("Fail to launch initd\n");
@@ -153,8 +145,6 @@ __do_fork (void *aux) {
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 
-	process_init ();
-
 	/* Finally, switch to the newly created process. */
 	if (succ)
 		do_iret (&if_);
@@ -209,7 +199,7 @@ int process_exec(void *f_name)
 	load_userStack(argv, argc, rspp);
 	_if.R.rdi = argc;
 	_if.R.rsi = (uint64_t)*rspp + sizeof(void *);
-
+	
 	hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)*rspp, true); // #ifdef DEBUG
 	// Q. ptr to number? -> convert to int, uint64_t
 
@@ -277,8 +267,6 @@ process_wait (tid_t child_tid UNUSED) {
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
 	// busy waiting #ifdef DEBUG
-	for (int i = 0; i < 1000000000; i++)
-		;
 	return -1;
 }
 
@@ -496,7 +484,6 @@ load (const char *file_name, struct intr_frame *if_) {
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close (file);
 	return success;
 }
 
