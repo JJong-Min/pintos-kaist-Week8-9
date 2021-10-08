@@ -26,6 +26,7 @@ static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
+void load_userStack(char **argv, int argc, void **rspp)
 
 /* General process initializer for initd and other process. */
 static void
@@ -176,20 +177,83 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+	// Project 2-1. Pass args - parse
+	char *argv[30]; // Q. 테스트는 일단 통과, 사이즈 30이면 충분하겠지? 동적할당 안해도 되겠지?
+	int argc = 0;
+
+	char *token, *save_ptr;
+	token = strtok_r(file_name, " ", &save_ptr);
+	while (token != NULL)
+	{
+		argv[argc] = token;
+		token = strtok_r(NULL, " ", &save_ptr);
+		argc++;
+	}
+
 	/* And then load the binary */
 	success = load (file_name, &_if);
-
+	
 	/* If load failed, quit. */
-	palloc_free_page (file_name);
-	if (!success)
+	if (!success) {
 		return -1;
+	}
+
+	// Project 2-1. Pass args - load arguments onto the user stack
+	void **rspp = &_if.rsp;
+	load_userStack(argv, argc, rspp);
+	_if.R.rdi = argc;
+	_if.R.rsi = (uint64_t)*rspp + sizeof(void *);
+
+	hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)*rspp, true);
+	palloc_free_page (file_name);
 
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
 }
 
+// Load user stack with arguments
+void load_userStack(char **argv, int argc, void **rspp)
+{
+	// 1. Save argument strings (character by character)
+	for (int i = argc - 1; i >= 0; i--)
+	{
+		int N = strlen(argv[i]);
+		for (int j = N; j >= 0; j--)
+		{
+			char individual_character = argv[i][j];
+			(*rspp)--;
+			**(char **)rspp = individual_character; // 1 byte
+		}
+		argv[i] = *(char **)rspp; // push this address too
+	}
 
+	// 2. Word-align padding
+	int pad = (int)*rspp % 8;
+	for (int k = 0; k < pad; k++)
+	{
+		(*rspp)--;
+		**(uint8_t **)rspp = (uint8_t)0; // 1 byte
+	}
+
+	// 3. Pointers to the argument strings
+	size_t PTR_SIZE = sizeof(char *);
+
+	(*rspp) -= PTR_SIZE;
+	**(char ***)rspp = (char *)0;
+
+	for (int i = argc - 1; i >= 0; i--)
+	{
+		(*rspp) -= PTR_SIZE;
+		**(char ***)rspp = argv[i];
+	}
+
+	// 4. Return address
+	(*rspp) -= PTR_SIZE;
+	**(void ***)rspp = (void *)0;
+}
+
+#include "threads/synch.h"
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
  * exception), returns -1.  If TID is invalid or if it was not a
