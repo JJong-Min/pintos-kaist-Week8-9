@@ -68,3 +68,15 @@ void exit(int status)
 	printf("%s: exit(%d)\n", thread_name(), status); // Process Termination Message
 	thread_exit();
 }
+
+/* Check validity of given user virtual address. Exits if any of below conditions is met. */
+// 1. Null pointer
+// 2. A pointer to kernel virtual address space (above KERN_BASE)
+// 3. A pointer to unmapped virtual memory (causes page_fault)
+void check_address(const uint64_t *uaddr)
+{
+	if (is_kernel_vaddr(uaddr))
+	{
+		exit(-1);
+	}
+}
