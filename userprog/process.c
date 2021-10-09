@@ -273,15 +273,32 @@ process_wait (tid_t child_tid UNUSED) {
 }
 
 /* Exit the process. This function is called by thread_exit (). */
-void
-process_exit (void) {
-	struct thread *curr = thread_current ();
+void process_exit(void)
+{
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
 
-	process_cleanup ();
+	struct thread *cur = thread_current();
+
+	// P2-4 Close all opened files
+	for (int i = 0; i < FDCOUNT_LIMIT; i++)
+	{
+		close(i);
+	}
+	//palloc_free_page(cur->fdTable);
+	palloc_free_multiple(cur->fdTable, FDT_PAGES); // multi-oom
+
+	// P2-5 Close current executable run by this process
+	file_close(cur->running);
+
+	process_cleanup();
+
+	// Wake up blocked parent
+	sema_up(&cur->wait_sema);
+	// Postpone child termination until parents receives its exit status with 'wait'
+	sema_down(&cur->free_sema);
 }
 
 /* Free the current process's resources. */
