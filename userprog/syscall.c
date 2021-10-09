@@ -53,9 +53,18 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 // Project 2-2. syscalls
 
-// Terminates Pintos by calling power_off(). No return.
+/* Terminates Pintos by calling power_off(). No return. */
 void halt(void)
 {
 	power_off();
 }
 
+/* End current thread, record exit statusNo return. */
+void exit(int status)
+{
+	struct thread *cur = thread_current();
+	cur->exit_status = status;
+
+	printf("%s: exit(%d)\n", thread_name(), status); // Process Termination Message
+	thread_exit();
+}
