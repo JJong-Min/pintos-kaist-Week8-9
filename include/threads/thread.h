@@ -95,11 +95,18 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
-		/* priority donation */
+	/* priority donation */
 	int init_priority;					/* the original priority*/
 	struct lock *wait_on_lock;			/* the locks which is thread wait*/
 	struct list donations;				/* the thread who donated priority to thread */
 	struct list_elem donation_elem;		/* the thread who donated priority to thread */
+
+	/* Project 2 */
+	int exit_status;				/* used to deliver child exit_status to parent */
+	struct file **fdTable; 			/* allocation in threac_create (thread.c) */
+	struct file *running; 			/* executable ran by current process (process.c load, process_exit) */
+	struct semaphore wait_sema; 	/* used by parent to wait for child */
+	struct semaphore free_sema;	 	/* Postpone child termination (process_exit) until parent receives its exit_status in 'wait' (process_wait) */
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -165,5 +172,9 @@ bool thread_compare_donate_priority (const struct list_elem *l, const struct lis
 void donate_priority (void);
 void remove_with_lock (struct lock *lock);
 void refresh_priority(void);
+
+/* 2-4 syscall - fork */
+#define FDT_PAGES 3						  // pages to allocate for file descriptor tables (thread_create, process_exit)
+#define FDCOUNT_LIMIT FDT_PAGES *(1 << 9) // Limit fdIdx
 
 #endif
