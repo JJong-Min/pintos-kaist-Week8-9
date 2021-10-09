@@ -5,6 +5,8 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h"
+
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -108,21 +110,19 @@ struct thread {
 	struct semaphore wait_sema; 	/* used by parent to wait for child */
 	struct semaphore free_sema;	 	/* Postpone child termination (process_exit) until parent receives its exit_status in 'wait' (process_wait) */
 
-#ifdef USERPROG
-	/* Owned by userprog/process.c. */
-	uint64_t *pml4;                     /* Page map level 4 */
-#endif
-#ifdef VM
-	/* Table for whole virtual memory owned by thread. */
-	struct supplemental_page_table spt;
-#endif
+	#ifdef USERPROG
+		/* Owned by userprog/process.c. */
+		uint64_t *pml4;                     /* Page map level 4 */
+	#endif
+	#ifdef VM
+		/* Table for whole virtual memory owned by thread. */
+		struct supplemental_page_table spt;
+	#endif
 
 	/* Owned by thread.c. */
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
 	int64_t wake_time;             		/* the time is thread wake up*/
-
-
 };
 
 /* If false (default), use round-robin scheduler.
