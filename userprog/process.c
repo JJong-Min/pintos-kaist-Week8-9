@@ -1,10 +1,10 @@
-#include "userprog/process.h"
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "userprog/process.h"
 #include "userprog/gdt.h"
 #include "userprog/tss.h"
 #include "filesys/directory.h"
@@ -283,10 +283,12 @@ void process_exit(void)
 	struct thread *cur = thread_current();
 
 	// P2-4 Close all opened files
+	/*
 	for (int i = 0; i < FDCOUNT_LIMIT; i++)
 	{
 		close(i);
 	}
+	*/
 	//palloc_free_page(cur->fdTable);
 	palloc_free_multiple(cur->fdTable, FDT_PAGES); // multi-oom
 
