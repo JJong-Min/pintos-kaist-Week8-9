@@ -63,6 +63,10 @@ syscall_handler (struct intr_frame *f) {
 	case SYS_WAIT:
 		f->R.rax = process_wait(f->R.rdi);
 		break;
+	case SYS_EXEC:
+		if (exec(f->R.rdi) == -1)
+			exit(-1);
+		break;
 	default:
 		exit(-1);
 		break;
