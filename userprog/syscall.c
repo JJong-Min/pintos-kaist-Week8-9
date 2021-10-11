@@ -17,6 +17,9 @@
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
+void check_address(uaddr);
+void halt(void);
+void exit(int status);
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -45,10 +48,22 @@ syscall_init (void) {
 
 /* The main system call interface */
 void
-syscall_handler (struct intr_frame *f UNUSED) {
+syscall_handler (struct intr_frame *f) {
 	// TODO: Your implementation goes here.
-	printf ("system call!\n");
-	thread_exit ();
+	char *fn_copy;
+	int siz;
+	switch (f->R.rax)
+	{
+	case SYS_HALT:
+		halt();
+		break;
+	case SYS_EXIT:
+		exit(f->R.rdi);
+		break;
+	default:
+		exit(-1);
+		break;
+	}
 }
 
 // Project 2-2. syscalls
