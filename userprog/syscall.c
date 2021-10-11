@@ -98,3 +98,28 @@ void check_address(const uint64_t *uaddr)
 		exit(-1);
 	}
 }
+
+/* Run new 'executable' from current process
+* Don't confuse with open! 'open' just opens up any file (txt, executable), 'exec' runs only executable
+* Never returns on success. Returns -1 on fail.
+*/
+int exec(char *file_name)
+{
+	struct thread *cur = thread_current();
+	check_address(file_name);
+
+	// 문제점) SYS_EXEC - process_exec의 process_cleanup 때문에 f->R.rdi 날아감.
+	// 여기서 file_name 동적할당해서 복사한 뒤, 그걸 넘겨주기
+	int siz = strlen(file_name) + 1;
+	char *fn_copy = palloc_get_page(PAL_ZERO);
+	if (fn_copy == NULL)
+		exit(-1);
+	strlcpy(fn_copy, file_name, siz);
+
+	if (process_exec(fn_copy) == -1)
+		return -1;
+
+	// Not reachable
+	NOT_REACHED();
+	return 0;
+}
