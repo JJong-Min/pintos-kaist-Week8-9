@@ -25,7 +25,8 @@ bool create(const char *file, unsigned initial_size);
 bool remove(const char *file);
 int filesize(int fd);
 void seek(int fd, unsigned position);
-off_t file_tell(struct file *file);
+unsigned tell (int fd);
+int open(const char *file);
 
 /* System call.
  *
@@ -92,6 +93,9 @@ syscall_handler (struct intr_frame *f) {
 	case SYS_TELL:
 		f->R.rax = tell(f->R.rdi);
 		break;
+	case SYS_OPEN:
+		f->R.rax = open(f->R.rdi);
+		break;
 	default:
 		exit(-1);
 		break;
@@ -109,6 +113,24 @@ static struct file *find_file_by_fd(int fd)
 		return NULL;
 
 	return cur->fdTable[fd]; // automatically returns NULL if empty
+}
+
+/* Find open spot in current thread's fdt and put file in it. Returns the fd. */
+int add_file_to_fdt(struct file *file)
+{
+	struct thread *cur = thread_current();
+	struct file **fdt = cur->fdTable; // file descriptor table
+
+	// Project2-extra - (multi-oom) Find open spot from the front
+	while (cur->fdIdx < FDCOUNT_LIMIT && fdt[cur->fdIdx])
+		cur->fdIdx++;
+
+	// Error - fdt full
+	if (cur->fdIdx >= FDCOUNT_LIMIT)
+		return -1;
+
+	fdt[cur->fdIdx] = file;
+	return cur->fdIdx;
 }
 
 // Project 2-2. syscalls
@@ -210,8 +232,26 @@ void seek(int fd, unsigned position)
 
 /* Returns the current position in FILE as a byte offset from the
  * start of the file. */
-off_t file_tell(struct file *file)
+unsigned tell (int fd)
 {
-	file_tell (file);
+	struct file *fileobj = find_file_by_fd(fd);
+	file_tell (fileobj);
 }
 
+/* Opens the file called file, returns fd or -1 (if file could not be opened for some reason) */
+int open(const char *file)
+{
+	check_address(file);
+	struct file *fileobj = filesys_open(file);
+
+	if (fileobj == NULL)
+		return -1;
+
+	int fd = add_file_to_fdt(fileobj);
+
+	// FD table full
+	if (fd == -1)
+		file_close(fileobj);
+
+	return fd;
+}
