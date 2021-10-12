@@ -24,6 +24,8 @@ int write(int fd, const void *buffer, unsigned size);
 bool create(const char *file, unsigned initial_size);
 bool remove(const char *file);
 int filesize(int fd);
+void seek(int fd, unsigned position);
+off_t file_tell(struct file *file);
 
 /* System call.
  *
@@ -83,6 +85,12 @@ syscall_handler (struct intr_frame *f) {
 		break;
 	case SYS_FILESIZE:
 		f->R.rax = filesize(f->R.rdi);
+		break;
+	case SYS_SEEK:
+		seek(f->R.rdi, f->R.rsi);
+		break;
+	case SYS_TELL:
+		f->R.rax = tell(f->R.rdi);
 		break;
 	default:
 		exit(-1);
@@ -189,3 +197,21 @@ int filesize(int fd)
 		return -1;
 	return file_length(fileobj);
 }
+
+/* Changes the next byte to be read or written in open file fd to position,
+* expressed in bytes from the beginning of the file (Thus, a position of 0 is the file's start). */
+void seek(int fd, unsigned position)
+{
+	struct file *fileobj = find_file_by_fd(fd);
+	if (fileobj <= 2)
+		return;
+	file_seek(fileobj, position);
+}
+
+/* Returns the current position in FILE as a byte offset from the
+ * start of the file. */
+off_t file_tell(struct file *file)
+{
+	file_tell (file);
+}
+
