@@ -219,7 +219,7 @@ int process_exec(void *f_name)
 	_if.R.rdi = argc;
 	_if.R.rsi = (uint64_t)*rspp + sizeof(void *);
 	
-	hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)*rspp, true); // #ifdef DEBUG
+	//hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)*rspp, true); // #ifdef DEBUG
 	// Q. ptr to number? -> convert to int, uint64_t
 
 	palloc_free_page(file_name);
@@ -302,7 +302,7 @@ int process_wait(tid_t child_tid UNUSED)
 	int exit_status = child->exit_status;
 
 	// Keep child page so parent can get exit_status
-	list_remove(&child->child_elem);
+	//list_remove(&child->child_elem);
 	sema_up(&child->free_sema); // wake-up child in process_exit - proceed with thread_exit
 	return exit_status;
 }
