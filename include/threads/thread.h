@@ -109,7 +109,11 @@ struct thread {
 	struct file *running; 			/* executable ran by current process (process.c load, process_exit) */
 	struct semaphore wait_sema; 	/* used by parent to wait for child */
 	struct semaphore free_sema;	 	/* Postpone child termination (process_exit) until parent receives its exit_status in 'wait' (process_wait) */
-
+	struct semaphore fork_sema;	 // parent wait (process_wait) until child fork completes (__do_fork)
+	struct list child_list;		 // keep children
+	struct list_elem child_elem; // used to put current thread into 'children' list
+	int fdIdx;			   // an index of an open spot in fdTable
+	
 	#ifdef USERPROG
 		/* Owned by userprog/process.c. */
 		uint64_t *pml4;                     /* Page map level 4 */
