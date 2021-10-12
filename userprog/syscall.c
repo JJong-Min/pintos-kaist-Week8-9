@@ -23,6 +23,7 @@ void exit(int status);
 int write(int fd, const void *buffer, unsigned size);
 bool create(const char *file, unsigned initial_size);
 bool remove(const char *file);
+int filesize(int fd);
 
 /* System call.
  *
@@ -80,10 +81,26 @@ syscall_handler (struct intr_frame *f) {
 	case SYS_REMOVE:
 		f->R.rax = remove(f->R.rdi);
 		break;
+	case SYS_FILESIZE:
+		f->R.rax = filesize(f->R.rdi);
+		break;
 	default:
 		exit(-1);
 		break;
 	}
+}
+
+// Project 2-4. File descriptor
+/* Check if given fd is valid, return cur->fdTable[fd] */
+static struct file *find_file_by_fd(int fd)
+{
+	struct thread *cur = thread_current();
+
+	// Error - invalid fd
+	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+		return NULL;
+
+	return cur->fdTable[fd]; // automatically returns NULL if empty
 }
 
 // Project 2-2. syscalls
@@ -163,4 +180,12 @@ bool remove(const char *file)
 	check_address(file);
 	return filesys_remove(file);
 }
-
+ 
+/* Returns the size, in bytes, of the file open as fd. */
+int filesize(int fd)
+{
+	struct file *fileobj = find_file_by_fd(fd);
+	if (fileobj == NULL)
+		return -1;
+	return file_length(fileobj);
+}
