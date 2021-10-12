@@ -189,32 +189,43 @@ thread_print_stats (void) {
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
-tid_t
-thread_create (const char *name, int priority,
-		thread_func *function, void *aux) {
+tid_t thread_create(const char *name, int priority,
+					thread_func *function, void *aux)
+{
 	struct thread *t;
 	tid_t tid;
 
-	ASSERT (function != NULL);
+	ASSERT(function != NULL);
 
 	/* Allocate thread. */
-	t = palloc_get_page (PAL_ZERO);
+	t = palloc_get_page(PAL_ZERO);
 	if (t == NULL)
 		return TID_ERROR;
+
+	/* Initialize thread. */
+	init_thread(t, name, priority);
+
+	// 2-4 File descriptor
+	//t->fdTable = palloc_get_page(PAL_ZERO); // multi-oom : need more pages to accomodate 10 stacks of 126 opens
+	t->fdTable = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
+	if (t->fdTable == NULL)
+		return TID_ERROR;
+	t->fdIdx = 2; // 0 : stdin, 1 : stdout
+	// 2-extra
+	t->fdTable[0] = 1; // dummy values to distinguish fd 0 and 1 from NULL
+	t->fdTable[1] = 2;
+
+	tid = t->tid = allocate_tid();
 
 	// 2-3 Parent child
 	struct thread *cur = thread_current();
 	list_push_back(&cur->child_list, &t->child_elem); // [parent] add new child to child_list
 
-	/* Initialize thread. */
-	init_thread (t, name, priority);
-	tid = t->tid = allocate_tid ();
-
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
-	t->tf.rip = (uintptr_t) kernel_thread;
-	t->tf.R.rdi = (uint64_t) function;
-	t->tf.R.rsi = (uint64_t) aux;
+	t->tf.rip = (uintptr_t)kernel_thread;
+	t->tf.R.rdi = (uint64_t)function;
+	t->tf.R.rsi = (uint64_t)aux;
 	t->tf.ds = SEL_KDSEG;
 	t->tf.es = SEL_KDSEG;
 	t->tf.ss = SEL_KDSEG;
@@ -222,9 +233,11 @@ thread_create (const char *name, int priority,
 	t->tf.eflags = FLAG_IF;
 
 	/* Add to run queue. */
-	thread_unblock (t);
-	thread_test_preemption();
-
+	thread_unblock(t);
+	if (thread_current()->priority < t->priority)
+	{
+		thread_yield();
+	}
 	return tid;
 }
 
