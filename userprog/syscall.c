@@ -20,6 +20,8 @@ void syscall_handler (struct intr_frame *);
 void check_address(uaddr);
 void halt(void);
 void exit(int status);
+int write(int fd, const void *buffer, unsigned size);
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -66,6 +68,9 @@ syscall_handler (struct intr_frame *f) {
 	case SYS_EXEC:
 		if (exec(f->R.rdi) == -1)
 			exit(-1);
+		break;
+	case SYS_WRITE:
+		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	default:
 		exit(-1);
@@ -126,4 +131,12 @@ int exec(char *file_name)
 	// Not reachable
 	NOT_REACHED();
 	return 0;
+}
+
+/* Writes size bytes from buffer to the open file fd.
+* Returns the number of bytes actually written, or -1 if the file could not be written. */
+int write(int fd, const void *buffer, unsigned size)
+{
+	putbuf(buffer, size);
+	return size;
 }
