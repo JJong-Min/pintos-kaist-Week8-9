@@ -21,6 +21,8 @@ void check_address(uaddr);
 void halt(void);
 void exit(int status);
 int write(int fd, const void *buffer, unsigned size);
+bool create(const char *file, unsigned initial_size);
+bool remove(const char *file);
 
 /* System call.
  *
@@ -71,6 +73,12 @@ syscall_handler (struct intr_frame *f) {
 		break;
 	case SYS_WRITE:
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
+	case SYS_CREATE:
+		f->R.rax = create(f->R.rdi, f->R.rsi);
+		break;
+	case SYS_REMOVE:
+		f->R.rax = remove(f->R.rdi);
 		break;
 	default:
 		exit(-1);
@@ -140,3 +148,19 @@ int write(int fd, const void *buffer, unsigned size)
 	putbuf(buffer, size);
 	return size;
 }
+
+/* Creates a new file called file initially initial_size bytes in size.
+* Returns true if successful, false otherwise */
+bool create(const char *file, unsigned initial_size)
+{
+	check_address(file);
+	return filesys_create(file, initial_size);
+}
+
+/* Deletes the file called 'file'. Returns true if successful, false otherwise. */
+bool remove(const char *file)
+{
+	check_address(file);
+	return filesys_remove(file);
+}
+
