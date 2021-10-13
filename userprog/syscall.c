@@ -31,6 +31,7 @@ unsigned tell (int fd);
 int open(const char *file);
 void close(int fd);
 
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -78,9 +79,6 @@ syscall_handler (struct intr_frame *f) {
 		if (exec(f->R.rdi) == -1)
 			exit(-1);
 		break;
-	case SYS_WRITE:
-		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
-		break;
 	case SYS_CREATE:
 		f->R.rax = create(f->R.rdi, f->R.rsi);
 		break;
@@ -104,6 +102,9 @@ syscall_handler (struct intr_frame *f) {
 		break;
 	case SYS_CLOSE:
 		close(f->R.rdi);
+		break;
+	case SYS_WRITE:
+		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	default:
 		exit(-1);
@@ -252,11 +253,37 @@ unsigned tell (int fd)
 }
 
 /* Writes size bytes from buffer to the open file fd.
-* Returns the number of bytes actually written, or -1 if the file could not be written. */
+* Returns the number of bytes actually written, or -1 if the file could not be written */
 int write(int fd, const void *buffer, unsigned size)
 {
-	putbuf(buffer, size);
-	return size;
+	check_address(buffer);
+	int ret;
+
+	struct file *fileobj = find_file_by_fd(fd);
+	if (fileobj == NULL)
+		return -1;
+
+	struct thread *cur = thread_current();
+
+	if (fileobj == STDOUT)
+	{
+		
+		putbuf(buffer, size);
+		ret = size;
+	}
+	
+	else if (fileobj == STDIN)
+	{
+		ret = -1;
+	}
+	else
+	{
+		lock_acquire(&file_rw_lock);
+		ret = file_write(fileobj, buffer, size);
+		lock_release(&file_rw_lock);
+	}
+
+	return ret;
 }
 
 /* (parent) Returns pid of child on success or -1 on fail
