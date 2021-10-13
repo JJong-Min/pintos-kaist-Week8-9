@@ -33,10 +33,6 @@ struct thread *get_child_with_pid(int pid)
 	struct thread *cur = thread_current();
 	struct list *child_list = &cur->child_list;
 
-#ifdef DEBUG_WAIT
-	//printf("\nparent children # : %d\n", list_size(child_list));
-#endif
-
 	for (struct list_elem *e = list_begin(child_list); e != list_end(child_list); e = list_next(e))
 	{
 		struct thread *t = list_entry(e, struct thread, child_elem);
@@ -544,6 +540,8 @@ load (const char *file_name, struct intr_frame *if_) {
 		goto done;
 	}
 
+	file_deny_write(file);
+	t->running = file;
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
 			|| memcmp (ehdr.e_ident, "\177ELF\2\1\1", 7)
