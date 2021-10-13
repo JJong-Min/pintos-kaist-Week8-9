@@ -28,7 +28,7 @@ bool create(const char *file, unsigned initial_size);
 bool remove(const char *file);
 void seek(int fd, unsigned position);
 unsigned tell (int fd);
-
+int open(const char *file);
 
 /* System call.
  *
@@ -97,6 +97,9 @@ syscall_handler (struct intr_frame *f) {
 		break;
 	case SYS_FORK:
 		f->R.rax = fork(f->R.rdi, f);
+		break;
+	case SYS_OPEN:
+		f->R.rax = open(f->R.rdi);
 		break;
 	default:
 		exit(-1);
@@ -245,4 +248,22 @@ int write(int fd, const void *buffer, unsigned size)
 tid_t fork(const char *thread_name, struct intr_frame *f)
 {
 	return process_fork(thread_name, f);
+}
+
+/* Opens the file called file, returns fd or -1 (if file could not be opened for some reason) */
+int open(const char *file)
+{
+	check_address(file);
+	struct file *fileobj = filesys_open(file);
+
+	if (fileobj == NULL)
+		return -1;
+
+	int fd = add_file_to_fdt(fileobj);
+
+	// FD table full
+	if (fd == -1)
+		file_close(fileobj);
+
+	return fd;
 }
