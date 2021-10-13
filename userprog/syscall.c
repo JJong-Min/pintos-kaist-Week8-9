@@ -29,6 +29,7 @@ bool remove(const char *file);
 void seek(int fd, unsigned position);
 unsigned tell (int fd);
 int open(const char *file);
+void close(int fd);
 
 /* System call.
  *
@@ -101,6 +102,9 @@ syscall_handler (struct intr_frame *f) {
 	case SYS_OPEN:
 		f->R.rax = open(f->R.rdi);
 		break;
+	case SYS_CLOSE:
+		close(f->R.rdi);
+		break;
 	default:
 		exit(-1);
 		break;
@@ -136,6 +140,18 @@ int add_file_to_fdt(struct file *file)
 
 	fdt[cur->fdIdx] = file;
 	return cur->fdIdx;
+}
+
+/* Check for valid fd and do cur->fdTable[fd] = NULL. Returns nothing */
+void remove_file_from_fdt(int fd)
+{
+	struct thread *cur = thread_current();
+
+	// Error - invalid fd
+	if (fd < 0 || fd >= FDCOUNT_LIMIT)
+		return;
+
+	cur->fdTable[fd] = NULL;
 }
 
 // Project 2-2. syscalls
@@ -267,3 +283,21 @@ int open(const char *file)
 
 	return fd;
 }
+
+/* Closes file descriptor fd. Ignores NULL file. Returns nothing. */
+void close(int fd)
+{
+	struct file *fileobj = find_file_by_fd(fd);
+	if (fileobj == NULL)
+		return;
+
+	struct thread *cur = thread_current();
+
+	remove_file_from_fdt(fd);
+	if (fd <= 1 || fileobj <= 2)
+		return;
+
+	file_close(fileobj);
+
+}
+
