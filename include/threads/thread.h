@@ -113,6 +113,7 @@ struct thread {
 	struct list child_list;		 // keep children
 	struct list_elem child_elem; // used to put current thread into 'children' list
 	int fdIdx;			   // an index of an open spot in fdTable
+	struct intr_frame parent_if; // to preserve my current intr_frame and pass it down to child in fork ('parent_if' in child's perspective)
 	
 	#ifdef USERPROG
 		/* Owned by userprog/process.c. */
