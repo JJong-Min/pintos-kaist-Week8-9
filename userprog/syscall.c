@@ -30,6 +30,7 @@ void seek(int fd, unsigned position);
 unsigned tell (int fd);
 int open(const char *file);
 void close(int fd);
+int read(int fd, void *buffer, unsigned size);
 
 
 /* System call.
@@ -105,6 +106,9 @@ syscall_handler (struct intr_frame *f) {
 		break;
 	case SYS_WRITE:
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
+	case SYS_READ:
+		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	default:
 		exit(-1);
@@ -328,3 +332,41 @@ void close(int fd)
 
 }
 
+/* Reads size bytes from the file open as fd into buffer.
+* Returns the number of bytes actually read (0 at end of file), or -1 if the file could not be read */
+int read(int fd, void *buffer, unsigned size)
+{
+	check_address(buffer);
+	int ret;
+	struct thread *cur = thread_current();
+
+	struct file *fileobj = find_file_by_fd(fd);
+	if (fileobj == NULL)
+		return -1;
+
+	if (fileobj == STDIN)
+	{
+		int i;
+		unsigned char *buf = buffer;
+		for (i = 0; i < size; i++)
+		{
+			char c = input_getc();
+			*buf++ = c;
+			if (c == '\0')
+				break;
+		}
+		ret = i;
+	}
+	else if (fileobj == STDOUT)
+	{
+		ret = -1;
+	}
+	else
+	{
+		// Q. read는 동시접근 허용해도 되지 않을까?
+		lock_acquire(&file_rw_lock);
+		ret = file_read(fileobj, buffer, size);
+		lock_release(&file_rw_lock);
+	}
+	return ret;
+}
