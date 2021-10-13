@@ -20,18 +20,20 @@ const int STDOUT = 2;
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
+void syscall_handler(struct intr_frame *);
+
 void check_address(uaddr);
 void halt(void);
 void exit(int status);
-int write(int fd, const void *buffer, unsigned size);
 bool create(const char *file, unsigned initial_size);
 bool remove(const char *file);
-void seek(int fd, unsigned position);
-unsigned tell (int fd);
 int open(const char *file);
-void close(int fd);
+int filesize(int fd);
 int read(int fd, void *buffer, unsigned size);
-
+int write(int fd, const void *buffer, unsigned size);
+void seek(int fd, unsigned position);
+unsigned tell(int fd);
+void close(int fd);
 
 /* System call.
  *
@@ -57,6 +59,7 @@ syscall_init (void) {
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+	lock_init(&file_rw_lock);
 }
 
 /* The main system call interface */
@@ -183,7 +186,8 @@ void exit(int status)
 // 3. A pointer to unmapped virtual memory (causes page_fault)
 void check_address(const uint64_t *uaddr)
 {
-	if (is_kernel_vaddr(uaddr))
+	struct thread *cur = thread_current();
+	if (uaddr == NULL || !(is_user_vaddr(uaddr)) || pml4_get_page(cur->pml4, uaddr) == NULL)
 	{
 		exit(-1);
 	}
