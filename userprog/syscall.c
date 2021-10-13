@@ -14,6 +14,9 @@
 #include <syscall-nr.h>
 #include "intrinsic.h"
 
+const int STDIN = 1;
+const int STDOUT = 2;
+
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
@@ -23,10 +26,9 @@ void exit(int status);
 int write(int fd, const void *buffer, unsigned size);
 bool create(const char *file, unsigned initial_size);
 bool remove(const char *file);
-int filesize(int fd);
 void seek(int fd, unsigned position);
 unsigned tell (int fd);
-int open(const char *file);
+
 
 /* System call.
  *
@@ -93,8 +95,8 @@ syscall_handler (struct intr_frame *f) {
 	case SYS_TELL:
 		f->R.rax = tell(f->R.rdi);
 		break;
-	case SYS_OPEN:
-		f->R.rax = open(f->R.rdi);
+	case SYS_FORK:
+		f->R.rax = fork(f->R.rdi, f);
 		break;
 	default:
 		exit(-1);
@@ -188,14 +190,6 @@ int exec(char *file_name)
 	return 0;
 }
 
-/* Writes size bytes from buffer to the open file fd.
-* Returns the number of bytes actually written, or -1 if the file could not be written. */
-int write(int fd, const void *buffer, unsigned size)
-{
-	putbuf(buffer, size);
-	return size;
-}
-
 /* Creates a new file called file initially initial_size bytes in size.
 * Returns true if successful, false otherwise */
 bool create(const char *file, unsigned initial_size)
@@ -238,20 +232,17 @@ unsigned tell (int fd)
 	file_tell (fileobj);
 }
 
-/* Opens the file called file, returns fd or -1 (if file could not be opened for some reason) */
-int open(const char *file)
+/* Writes size bytes from buffer to the open file fd.
+* Returns the number of bytes actually written, or -1 if the file could not be written. */
+int write(int fd, const void *buffer, unsigned size)
 {
-	check_address(file);
-	struct file *fileobj = filesys_open(file);
+	putbuf(buffer, size);
+	return size;
+}
 
-	if (fileobj == NULL)
-		return -1;
-
-	int fd = add_file_to_fdt(fileobj);
-
-	// FD table full
-	if (fd == -1)
-		file_close(fileobj);
-
-	return fd;
+/* (parent) Returns pid of child on success or -1 on fail
+* (child) Returns 0 */
+tid_t fork(const char *thread_name, struct intr_frame *f)
+{
+	return process_fork(thread_name, f);
 }
